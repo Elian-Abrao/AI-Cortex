@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pyjwt
+tqdm
+python-multipart
+requests
+langchain-openai
+langchain-mcp-adapters
+langgraph
+python-dotenv
+pytest
