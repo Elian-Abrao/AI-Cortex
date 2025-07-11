@@ -72,13 +72,16 @@ async def create_agent(
         try:
             tools = await client.get_tools()
             break
-        except Exception as exc:  # pragma: no cover - network
-            logger.warning(f"❌ Erro ao conectar MCPs: {exc} - retry {attempt}")
+        except* Exception as group_exc:
+            for err in group_exc.exceptions:
+                logger.error(f"💥 Erro interno no MCP: {type(err).__name__}: {err}", exc_info=True)
+            logger.warning(f"❌ Erro ao conectar MCPs: tentativa {attempt + 1}/{max_retries} 🔁")
             await asyncio.sleep(2 ** attempt)
-    if tools is None:
-        raise RuntimeError("Falha ao conectar aos MCPs")
 
-    logger.info(f"🔍 Ferramentas carregadas: {[t.name for t in tools]}")
+    if tools is None:
+        raise RuntimeError("❌ Falha ao conectar aos MCPs 🚫")
+
+    logger.info(f"🧠 Ferramentas carregadas: {[t.name for t in tools]}")
 
     llm = ChatOpenAI(
         model=model or defaults.get("model"),
@@ -99,7 +102,7 @@ async def create_agent(
 
     config = {"configurable": {"thread_id": thread_id or defaults.get("thread_id", "sessao_elian")}}
 
-    logger.info("✅ Agente criado")
+    logger.info("✅ Agente criado com sucesso! 🤖")
     return AgentService(agent, config, memory)
 
 

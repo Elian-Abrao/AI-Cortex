@@ -41,5 +41,12 @@
     "args": [
       "src/servers/mcp_currency_converter.py"
     ]
+  },
+  "unit-converter": {
+    "transport": "stdio",
+    "command": "python",
+    "args": [
+      "src/servers/mcp_unit_converter.py"
+    ]
   }
 }

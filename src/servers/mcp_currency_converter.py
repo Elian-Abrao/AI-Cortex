@@ -33,4 +33,5 @@ async def convert(amount: float, from_currency: str, to_currency: str) -> str:
 
 
 if __name__ == "__main__":
+    print("🚀 Iniciando MCP de conversão de moeda...")
     mcp.run()

@@ -6,6 +6,8 @@ from typing import Any, Dict
 import yaml
 from dotenv import load_dotenv
 
+import logging
+logger = logging.getLogger("core_agent")
 
 class ConfigError(Exception):
     """Raised when configuration loading fails."""
@@ -23,17 +25,17 @@ def load_mcp_config(path: str | os.PathLike = "config/mcp_config.json") -> Dict[
     """Load MCP server configuration and inject env vars."""
     config_path = Path(path)
     if not config_path.exists():
-        raise ConfigError(f"Arquivo de configuração não encontrado: {config_path}")
+        raise ConfigError(f"🗂️ Arquivo de configuração não encontrado: {config_path}")
     try:
         with open(config_path, "r", encoding="utf-8") as f:
             raw_cfg = json.load(f)
-    except Exception as exc:  # pragma: no cover - sanity
-        raise ConfigError(f"Falha ao ler {config_path}: {exc}") from exc
+    except Exception as exc:
+        raise ConfigError(f"❌ Falha ao ler {config_path}: {exc}") from exc
 
     servers: Dict[str, Any] = {}
     for name, cfg in raw_cfg.items():
         if not all(k in cfg for k in ("command", "args", "transport")):
-            raise ConfigError(f"Configuração inválida para {name}")
+            raise ConfigError(f"❌ Configuração inválida para {name}")
         srv = {
             "command": cfg["command"],
             "args": cfg["args"],
@@ -42,6 +44,11 @@ def load_mcp_config(path: str | os.PathLike = "config/mcp_config.json") -> Dict[
         if "env_vars" in cfg:
             srv["env"] = {var: os.getenv(var) for var in cfg["env_vars"]}
         servers[name] = srv
+
+        # 🚀 Log do comando a ser executado
+        cmd_preview = f"{srv['command']} {' '.join(srv['args'])}"
+        logger.info(f"📦 MCP '{name}' será iniciado com: `{cmd_preview}`")
+
     return servers
 
 
