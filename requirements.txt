@@ -8,4 +8,6 @@ langchain-openai
 langchain-mcp-adapters
 langgraph
 python-dotenv
-pint
+pytest
+pytest-asyncio
+mcp-server-calculator

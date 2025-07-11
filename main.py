@@ -12,11 +12,10 @@ async def interactive_console() -> None:
     service = await create_agent()
 
     while True:
-        try:
-            user_input = input("\n📝 Pergunta: ")
-            logger.debug(f"👤 Mensagem do Usuario: {user_input}")
-        except (EOFError, KeyboardInterrupt):
-            print()
+        user_input = input("\n📝 Pergunta: ")
+        logger.debug(f"👤 Mensagem do Usuario: {user_input}")
+        if user_input.lower() in ["exit", "quit", "sair"]: 
+            print("Até logo!")
             break
         if not user_input:
             continue

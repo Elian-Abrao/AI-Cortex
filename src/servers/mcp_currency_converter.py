@@ -1,0 +1,36 @@
+"""MCP server para a conversao de moedas."""
+
+import requests
+from mcp.server.fastmcp import FastMCP
+
+API_URL = "https://api.exchangerate-api.com/v4/latest/{}"
+
+mcp = FastMCP("currency-converter")
+
+@mcp.tool()
+async def convert(amount: float, from_currency: str, to_currency: str) -> str:
+    """Realiza a conversao de uma quantia de uma moeda para outra.
+
+    Args:
+        amount (float): Quantia a ser convertida.
+        from_currency (str): Moeda de origem (ex: "USD").
+        to_currency (str): Moeda de destino (ex: "EUR").
+
+    Retorna:
+        str: Quantia convertida como string.
+    Raises:
+        ValueError: "Currency not found" - Se a moeda nao for encontrada.
+    """
+    url = API_URL.format(from_currency.upper())
+    resp = requests.get(url, timeout=10)
+    data = resp.json()
+    rates = data.get("rates", {})
+    if to_currency.upper() not in rates:
+        raise ValueError("Currency not found")
+    rate = rates[to_currency.upper()]
+    result = amount * rate
+    return str(result)
+
+
+if __name__ == "__main__":
+    mcp.run()
