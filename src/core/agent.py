@@ -22,6 +22,46 @@ from .memory_manager import MemoryManager
 
 logger = setup_logger("core_agent")
 
+_mcp_client: MultiServerMCPClient | None = None
+_mcp_tools: list[Any] | None = None
+
+
+async def init_mcp_tools() -> list[Any]:
+    """Initialize MCP clients and cache the tools."""
+    global _mcp_client, _mcp_tools
+    if _mcp_tools is not None:
+        return _mcp_tools
+
+    load_env()
+    try:
+        servers = load_mcp_config()
+    except ConfigError as exc:
+        logger.error(f"❌ {exc}")
+        raise
+
+    _mcp_client = MultiServerMCPClient(servers)
+
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            _mcp_tools = await _mcp_client.get_tools()
+            break
+        except* Exception as group_exc:
+            for err in group_exc.exceptions:
+                logger.error(
+                    f"💥 Erro interno no MCP: {type(err).__name__}: {err}",
+                    exc_info=True,
+                )
+            logger.warning(
+                f"❌ Erro ao conectar MCPs: tentativa {attempt + 1}/{max_retries} 🔁"
+            )
+            await asyncio.sleep(2 ** attempt)
+
+    if _mcp_tools is None:
+        raise RuntimeError("❌ Falha ao conectar aos MCPs 🚫")
+
+    logger.info(f"🧠 Ferramentas carregadas: {[t.name for t in _mcp_tools]}")
+    return _mcp_tools
 
 class AgentService:
     """Wrapper around a LangGraph agent with memory management."""
@@ -58,30 +98,7 @@ async def create_agent(
 
     logger.info("🔧 Carregando configuração padrão")
 
-    try:
-        servers = load_mcp_config()
-    except ConfigError as exc:
-        logger.error(f"❌ {exc}")
-        raise
-
-    client = MultiServerMCPClient(servers)
-
-    max_retries = 3
-    tools = None
-    for attempt in range(max_retries):
-        try:
-            tools = await client.get_tools()
-            break
-        except* Exception as group_exc:
-            for err in group_exc.exceptions:
-                logger.error(f"💥 Erro interno no MCP: {type(err).__name__}: {err}", exc_info=True)
-            logger.warning(f"❌ Erro ao conectar MCPs: tentativa {attempt + 1}/{max_retries} 🔁")
-            await asyncio.sleep(2 ** attempt)
-
-    if tools is None:
-        raise RuntimeError("❌ Falha ao conectar aos MCPs 🚫")
-
-    logger.info(f"🧠 Ferramentas carregadas: {[t.name for t in tools]}")
+    tools = await init_mcp_tools()
 
     llm = ChatOpenAI(
         model=model or defaults.get("model"),
@@ -92,6 +109,8 @@ async def create_agent(
     )
 
     memory = MemoryManager(checkpoint_path or defaults.get("checkpoint_path", "checkpoints"))
+    tid = thread_id or defaults.get("thread_id", "sessao_elian")
+    memory.load(tid)
 
     prompt = system_prompt or defaults.get(
         "system_prompt",
@@ -100,7 +119,7 @@ async def create_agent(
 
     agent = create_react_agent(model=llm, tools=tools, prompt=prompt, checkpointer=memory.saver)
 
-    config = {"configurable": {"thread_id": thread_id or defaults.get("thread_id", "sessao_elian")}}
+    config = {"configurable": {"thread_id": tid}}
 
     logger.info("✅ Agente criado com sucesso! 🤖")
     return AgentService(agent, config, memory)
@@ -118,6 +137,7 @@ async def handle_request(message: Dict[str, Any]) -> Dict[str, Any]:
 
     service = await create_agent(
         temperature=claims.get("default_temperature"),
+        thread_id=claims.get("thread_id"),
     )
     try:
         response = await service.run(prompt)

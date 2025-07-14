@@ -9,6 +9,7 @@ import threading
 from ..broker import publish, get_response
 from ..core.core_agent import start_consumer
 from ..core.logger_setup import setup_logger
+from ..core.agent import init_mcp_tools
 
 logger = setup_logger("gateway")
 app = FastAPI(title="AI Agent Gateway")
@@ -30,6 +31,7 @@ class QueryRequest(BaseModel):
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     user = authenticate_user(form_data.username, form_data.password)
     token = create_token(form_data.username, user)
+    await init_mcp_tools()
     return Token(access_token=token)
 
 
@@ -48,7 +50,7 @@ async def agent_query(request: Request, body: QueryRequest):
     }
     request_id = publish(message)
 
-    for _ in range(100):
+    for _ in range(10000):
         await asyncio.sleep(0.1)
         response = get_response(request_id)
         if response:

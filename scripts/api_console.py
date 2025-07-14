@@ -3,6 +3,20 @@ import getpass
 
 BASE_URL = "http://localhost:8000"
 
+def extrair_resposta_final(data):
+    try:
+        mensagens = data["response"]["messages"]
+        for mensagem in reversed(mensagens):  # percorre de trás pra frente
+            if (
+                mensagem["type"] == "ai"
+                and mensagem.get("content")
+                and not mensagem.get("tool_calls")
+            ):
+                return mensagem["content"]
+    except Exception as e:
+        print(f"Erro ao extrair resposta: {e}")
+        print("Dados recebidos:", data)
+    return None
 
 def login(username: str, password: str) -> str:
     resp = requests.post(f"{BASE_URL}/login", data={"username": username, "password": password})
@@ -15,7 +29,8 @@ def query(prompt: str, token: str) -> str:
     resp = requests.post(f"{BASE_URL}/agent/query", json={"prompt": prompt}, headers=headers)
     resp.raise_for_status()
     data = resp.json()
-    return data.get("response", "")
+    resposta = extrair_resposta_final(data)
+    return resposta
 
 
 def main() -> None:
@@ -31,7 +46,7 @@ def main() -> None:
             break
         if not prompt:
             continue
-        response = query(prompt, token)
+        response = query("qual eh o tamanho do terre", token)
         print(f"🤖 Resposta: {response}")
 
 

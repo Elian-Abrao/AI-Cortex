@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Dict, Any
+from uuid import uuid4
 import jwt
 from fastapi import HTTPException
 from pydantic import BaseModel
@@ -35,14 +36,16 @@ def authenticate_user(username: str, password: str) -> Dict[str, Any]:
 
 def create_token(username: str, user_data: Dict[str, Any]) -> str:
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    thread_id = str(uuid4())
     payload = {
         "sub": username,
         "exp": expire,
+        "thread_id": thread_id,
         "default_temperature": user_data["default_temperature"],
         "allowed_tools": user_data["allowed_tools"],
     }
     token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-    logger.info("🔐 Token gerado")
+    logger.info(f"🔐 Token gerado com thread {thread_id}")
     return token
 
 

@@ -52,5 +52,4 @@ async def convert(value: float, from_unit: str, to_unit: str) -> str:
 
 
 if __name__ == "__main__":
-    print("🚀 Iniciando MCP de conversão de unidade...")
     mcp.run()
