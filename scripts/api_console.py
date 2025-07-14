@@ -44,7 +44,7 @@ def main() -> None:
 
     while True:
         prompt = input("\n📝 Pergunta: ")
-        if prompt.lower() in {"exit", "quit", "sair"}:
+        if prompt.lower() in {"exit", "quit", "sair", 'cls'}:
             print("Até logo!")
             break
         if not prompt:

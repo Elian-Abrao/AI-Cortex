@@ -4,6 +4,8 @@ from typing import Any
 
 from langgraph.checkpoint.memory import InMemorySaver
 
+from .logger_setup import setup_logger
+logger = setup_logger("memory_manager")
 
 class MemoryManager:
     def __init__(self, base_path: str = "checkpoints"):
@@ -24,6 +26,15 @@ class MemoryManager:
 
     def load(self, thread_id: str) -> None:
         path = self.snapshot_path(thread_id)
-        if path.exists():
-            with open(path, "rb") as f:
-                self.saver.storage[thread_id] = pickle.load(f)
+        if not path.exists():
+            return
+
+        with open(path, "rb") as f:
+            data = pickle.load(f)
+
+        # 🔧  Se o snapshot antigo for list → converte para dict compatível
+        if isinstance(data, list):
+            logger.warning(f"📛 Snapshot legacy (list) detectado para {thread_id} → convertendo")
+            data = {"__all__": data}          # namespace default
+
+        self.saver.storage[thread_id] = data

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import os
-from typing import Any, Dict, Optional
+import traceback 
+from typing import Any, Dict, Optional, List
 
 from langchain_openai import ChatOpenAI
 from langchain_mcp_adapters.client import MultiServerMCPClient
@@ -19,6 +20,7 @@ from .config import (
 )
 from .logger_setup import setup_logger
 from .memory_manager import MemoryManager
+from .context_utils import reduce_messages
 
 logger = setup_logger("core_agent")
 
@@ -64,23 +66,41 @@ async def init_mcp_tools() -> list[Any]:
     return _mcp_tools
 
 class AgentService:
-    """Wrapper around a LangGraph agent with memory management."""
+    """Wrapper em torno do agente LangGraph com memória persistente."""
 
     def __init__(self, agent: Any, config: Dict[str, Any], memory: MemoryManager):
-        self.agent = agent
-        self.config = config
-        self.memory = memory
+        self.agent = agent           # executor LangGraph
+        self.config = config         # {"configurable": {"thread_id": ...}}
+        self.memory = memory         # gerencia checkpoints .pkl
 
     async def run(self, user_input: str) -> str:
-        logger.info("🚀 Processando input")
-        result = await self.agent.ainvoke(
-            {"messages": [HumanMessage(content=user_input)]}, self.config
-        )
-        logger.info("✅ Resposta gerada")
         thread_id = self.config["configurable"]["thread_id"]
-        path = self.memory.save(thread_id)
-        logger.info(f"📝 Memória salva em {path}")
-        return result
+        logger.info(f"🚀 run() – thread_id={thread_id}")
+
+        # 1️⃣ Chamada segura ao agente (enviamos só o novo HumanMessage)
+        try:
+            result = await self.agent.ainvoke(
+                {"messages": [HumanMessage(content=user_input)]},
+                self.config,
+            )
+        except Exception:
+            logger.error(f"🔥 Falha dentro de ainvoke:\n{traceback.format_exc()}")
+            raise
+
+        # 2️⃣ Extrai diálogo completo (histórico + resposta)
+        msgs = result if isinstance(result, list) else result["messages"]
+        answer = msgs[-1].content
+        logger.info(f"🗣️ Resposta extraída: {answer!r}")
+
+        # 3️⃣ → APLICA RESUMO e mede tokens
+        msgs_reduced = reduce_messages(msgs)          # 🔹 aqui
+        logger.debug(f"📦 Mensagens após reduce: {len(msgs_reduced)}")
+
+        # 4️⃣ Atualiza saver e grava pkl
+        # self.memory.saver.storage[thread_id] = msgs_reduced
+        self.memory.save(thread_id)
+
+        return answer
 
 
 async def create_agent(
@@ -121,7 +141,12 @@ async def create_agent(
         "Você é um assistente que pode usar ferramentas via MCP para ajudar o usuário.",
     )
 
-    agent = create_react_agent(model=llm, tools=tools, prompt=prompt, checkpointer=memory.saver)
+    agent = create_react_agent(
+        model=llm,
+        tools=tools,
+        prompt=prompt,
+        checkpointer=memory.saver,
+    )
 
     config = {"configurable": {"thread_id": tid}}
 
@@ -143,6 +168,7 @@ async def handle_request(message: Dict[str, Any]) -> Dict[str, Any]:
         temperature=claims.get("default_temperature"),
         thread_id=claims.get("thread_id"),
         allowed_tools=claims.get("allowed_tools"),
+
     )
     try:
         response = await service.run(prompt)

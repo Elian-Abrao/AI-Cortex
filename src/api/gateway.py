@@ -10,6 +10,7 @@ from ..broker import publish, get_response
 from ..core.core_agent import start_consumer
 from ..core.logger_setup import setup_logger
 from ..core.agent import init_mcp_tools
+from ..core.agent_registry import get_agent
 
 logger = setup_logger("gateway")
 app = FastAPI(title="AI Agent Gateway")
@@ -46,6 +47,7 @@ async def refresh(request: Request):
     return Token(access_token=new_token)
 
 
+# agent_query agora chama diretamente o agente em cache
 @app.post("/agent/query")
 async def agent_query(request: Request, body: QueryRequest):
     auth_header = request.headers.get("Authorization")
@@ -53,19 +55,20 @@ async def agent_query(request: Request, body: QueryRequest):
         logger.warning("❌ Token ausente")
         raise HTTPException(status_code=401, detail="Token required")
 
-    token = auth_header.split(" ")[1]
-    claims = verify_token(token)
-    message = {
-        "prompt": body.prompt,
-        "claims": claims,
-    }
-    request_id = publish(message)
+    token   = auth_header.split(" ")[1]
+    claims  = verify_token(token)
 
-    for _ in range(10000):
-        await asyncio.sleep(0.1)
-        response = get_response(request_id)
-        if response:
-            logger.info("✅ Consulta processada")
-            return response
+    # 🚀 Recupera ou cria o AgentService em cache para este thread_id
+    service = await get_agent(
+        thread_id     = claims.get("thread_id"),
+        temperature   = claims.get("default_temperature"),
+        allowed_tools = claims.get("allowed_tools"),
+    )
 
-    raise HTTPException(status_code=504, detail="Timeout waiting for agent")
+    try:
+        response_text = await service.run(body.prompt)
+    except Exception as exc:
+        logger.exception(f"❌ Erro ao processar consulta: {exc}")
+        raise HTTPException(status_code=500, detail="Erro interno")
+
+    return {"response": response_text}
