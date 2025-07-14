@@ -4,6 +4,7 @@
 - [Autenticação](#autenticacao)
 - [Endpoints](#endpoints)
   - [/login](#login)
+  - [/refresh](#refresh)
   - [/agent/query](#agentquery)
   - [/health](#health)
 - [Exemplos de Requisição](#exemplos-de-requisicao)
@@ -39,6 +40,20 @@ Realiza a autenticação e retorna um token JWT.
   "token_type": "bearer"
 }
 ```
+
+### /refresh
+`POST /refresh`
+Recebe um token expirado no cabeçalho **Authorization** e devolve um novo token
+mantendo o mesmo `thread_id`.
+
+**Resposta**
+```json
+{
+  "access_token": "<jwt>",
+  "token_type": "bearer"
+}
+```
+
 
 ### /agent/query
 `POST /agent/query`

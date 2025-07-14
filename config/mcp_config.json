@@ -7,34 +7,6 @@
       "mcp_server_calculator"
     ]
   },
-  "DeepResearchMCP": {
-    "transport": "stdio",
-    "command": "cmd",
-    "args": [
-      "/c",
-      "npx",
-      "-y",
-      "@smithery/cli@latest",
-      "run",
-      "@ameeralns/DeepResearchMCP",
-      "--key",
-      "a14a5568-ef20-462d-bfda-cc10b6eb8089"
-    ]
-  },
-  "tavily-mcp": {
-    "transport": "stdio",
-    "command": "npx",
-    "args": [
-      "-y",
-      "@smithery/cli@latest",
-      "run",
-      "@tavily-ai/tavily-mcp",
-      "--key",
-      "a14a5568-ef20-462d-bfda-cc10b6eb8089",
-      "--profile",
-      "enchanting-trout-J7gVCJ"
-    ]
-  },
   "currency-converter": {
     "transport": "stdio",
     "command": "python",

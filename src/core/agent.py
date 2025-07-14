@@ -90,6 +90,7 @@ async def create_agent(
     system_prompt: Optional[str] = None,
     thread_id: Optional[str] = None,
     checkpoint_path: Optional[str] = None,
+    allowed_tools: Optional[list[str]] = None,
 ) -> AgentService:
     """Create the agent with optional overrides."""
 
@@ -99,6 +100,9 @@ async def create_agent(
     logger.info("🔧 Carregando configuração padrão")
 
     tools = await init_mcp_tools()
+    if allowed_tools:
+        tools = [t for t in tools if getattr(t, "name", None) in allowed_tools]
+    logger.info(f"🛠️ Ferramentas permitidas: {allowed_tools}")
 
     llm = ChatOpenAI(
         model=model or defaults.get("model"),
@@ -127,7 +131,7 @@ async def create_agent(
 
 async def handle_request(message: Dict[str, Any]) -> Dict[str, Any]:
     """Process a broker message using a newly created agent."""
-
+    logger.info(f"Mensagem recebida: {message}")
     request_id = message.get("id")
     payload = message.get("payload", {})
     prompt = payload.get("prompt", "")
@@ -138,6 +142,7 @@ async def handle_request(message: Dict[str, Any]) -> Dict[str, Any]:
     service = await create_agent(
         temperature=claims.get("default_temperature"),
         thread_id=claims.get("thread_id"),
+        allowed_tools=claims.get("allowed_tools"),
     )
     try:
         response = await service.run(prompt)
@@ -147,4 +152,3 @@ async def handle_request(message: Dict[str, Any]) -> Dict[str, Any]:
         return {"id": request_id, "response": error_message, "tools_used": []}
 
     return {"id": request_id, "response": response, "tools_used": []}
-

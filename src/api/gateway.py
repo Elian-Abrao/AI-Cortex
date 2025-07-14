@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 
-from ..auth.auth import authenticate_user, create_token, verify_token, Token
+from ..auth.auth import authenticate_user, create_token, verify_token, refresh_token, Token
 import asyncio
 import threading
 
@@ -33,6 +33,17 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     token = create_token(form_data.username, user)
     await init_mcp_tools()
     return Token(access_token=token)
+
+
+@app.post("/refresh", response_model=Token)
+async def refresh(request: Request):
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        logger.warning("❌ Token ausente para refresh")
+        raise HTTPException(status_code=401, detail="Token required")
+    old_token = auth_header.split(" ")[1]
+    new_token = refresh_token(old_token)
+    return Token(access_token=new_token)
 
 
 @app.post("/agent/query")

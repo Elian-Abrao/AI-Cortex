@@ -22,7 +22,7 @@ USER_DB = cfg.get(
         "elian": {
             "password": "teste123",
             "default_temperature": 0.7,
-            "allowed_tools": [],
+            "allowed_tools": ["calculate", "converter_moedas", "converter_medidas", 'obter_cotacao'],
         },
         "Matti": {
             "password": "Agromatic@2026@dev",
@@ -47,20 +47,38 @@ def authenticate_user(username: str, password: str) -> Dict[str, Any]:
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
 
-def create_token(username: str, user_data: Dict[str, Any]) -> str:
+def create_token(username: str, user_data: Dict[str, Any], thread_id: str | None = None) -> str:
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    thread_id = str(uuid4())
+    tid = thread_id or str(uuid4())
     payload = {
         "sub": username,
         "exp": expire,
-        "thread_id": thread_id,
+        "thread_id": tid,
         "default_temperature": user_data["default_temperature"],
         "allowed_tools": user_data["allowed_tools"],
     }
     token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-    logger.info(f"🔐 Token gerado com thread {thread_id} [USUARIO] = {username}")
-    logger.info(f"🎲 Dados de config [USUARIO] {username} -> {payload}")
+    logger.info(f"🔐 Token gerado com thread {tid}")
     return token
+
+
+def refresh_token(old_token: str) -> str:
+    try:
+        payload = jwt.decode(
+            old_token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_exp": False}
+        )
+    except Exception as exc:
+        logger.error(f"❌ Erro ao decodificar token expirado: {exc}")
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    username = payload.get("sub")
+    if not username or username not in USER_DB:
+        logger.warning("❌ Usuário desconhecido no refresh")
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    user_data = USER_DB[username]
+    thread_id = payload.get("thread_id")
+    return create_token(username, user_data, thread_id=thread_id)
 
 
 def verify_token(token: str) -> Dict[str, Any]:

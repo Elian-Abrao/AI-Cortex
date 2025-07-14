@@ -31,6 +31,30 @@ async def converter_moedas(amount: float, from_currency: str, to_currency: str) 
     result = amount * rate
     return str(result)
 
+@mcp.tool()
+async def obter_cotacao(base: str = "BRL", moedas: list[str] | None = None) -> dict:
+    """
+    Retorna a cotação atual de uma ou mais moedas em relação à moeda base.
+
+    Args:
+        base (str): Moeda base (ex: "BRL", "USD").
+        moedas (list[str], opcional): Lista de moedas-alvo para filtrar (ex: ["EUR", "USD"]). Se None, retorna todas.
+
+    Returns:
+        dict: Dicionário com as cotações das moedas solicitadas.
+    """
+    url = API_URL.format(base.upper())
+    resp = requests.get(url, timeout=10)
+    data = resp.json()
+    rates = data.get("rates", {})
+
+    if moedas:
+        moedas_upper = [m.upper() for m in moedas]
+        filtered = {moeda: rates.get(moeda, "❌ Não encontrada") for moeda in moedas_upper}
+        return filtered
+
+    return rates
+
 
 if __name__ == "__main__":
     mcp.run()

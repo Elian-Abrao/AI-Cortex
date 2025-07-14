@@ -10,19 +10,16 @@ from src.core.config import load_default_config
 BASE_URL = load_default_config().get("base_url", "http://localhost:8000")
 
 def extrair_resposta_final(data):
-    try:
-        mensagens = data["response"]["messages"]
-        for mensagem in reversed(mensagens):  # percorre de trás pra frente
-            if (
-                mensagem["type"] == "ai"
-                and mensagem.get("content")
-                and not mensagem.get("tool_calls")
-            ):
-                return mensagem["content"]
-    except Exception as e:
-        print(f"Erro ao extrair resposta: {e}")
-        print("Dados recebidos:", data)
-    return None
+    resposta_raw = data.get("response")
+    
+    if isinstance(resposta_raw, str):
+        return resposta_raw
+    elif isinstance(resposta_raw, dict):
+        # fallback para formatos com messages, se você voltar a usar isso no futuro
+        messages = resposta_raw.get("messages", [])
+        if messages:
+            return messages[-1].get("content", "")
+    return "⚠️ Resposta malformada ou vazia"
 
 def login(username: str, password: str) -> str:
     resp = requests.post(f"{BASE_URL}/login", data={"username": username, "password": password})
