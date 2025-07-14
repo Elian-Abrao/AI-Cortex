@@ -45,7 +45,7 @@ def _convert(value: float, from_unit: str, to_unit: str) -> float:
 
 
 @mcp.tool()
-async def convert(value: float, from_unit: str, to_unit: str) -> str:
+async def converter_medidas(value: float, from_unit: str, to_unit: str) -> str:
     """Converte unidades de medida (comprimento ou área)."""
     result = _convert(value, from_unit, to_unit)
     return str(result)

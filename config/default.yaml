@@ -5,3 +5,17 @@ system_prompt: "## Identidade\nVocê é **MATI**, um agente de IA especializado 
 thread_id: sessao_elian
 checkpoint_path: checkpoints
 error_message: "❌ Ocorreu um erro"
+secret_key: "secret"
+algorithm: "HS256"
+access_token_expire_minutes: 1800
+user_db:
+  elian:
+    password: "teste123"
+    default_temperature: 0.7
+    allowed_tools: []
+  Matti:
+    password: "Agromatic@2026@dev"
+    default_temperature: 0.0
+    allowed_tools:
+      - "DeepResearchMCP"
+base_url: "http://localhost:8000"

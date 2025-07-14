@@ -8,7 +8,7 @@ API_URL = "https://api.exchangerate-api.com/v4/latest/{}"
 mcp = FastMCP("currency-converter")
 
 @mcp.tool()
-async def convert(amount: float, from_currency: str, to_currency: str) -> str:
+async def converter_moedas(amount: float, from_currency: str, to_currency: str) -> str:
     """Realiza a conversao de uma quantia de uma moeda para outra.
 
     Args:

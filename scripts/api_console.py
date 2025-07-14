@@ -1,7 +1,13 @@
 import requests
 import getpass
+import sys
+import os
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-BASE_URL = "http://localhost:8000"
+from src.core.config import load_default_config
+
+BASE_URL = load_default_config().get("base_url", "http://localhost:8000")
 
 def extrair_resposta_final(data):
     try:
@@ -46,7 +52,7 @@ def main() -> None:
             break
         if not prompt:
             continue
-        response = query("qual eh o tamanho do terre", token)
+        response = query(prompt, token)
         print(f"🤖 Resposta: {response}")
 
 

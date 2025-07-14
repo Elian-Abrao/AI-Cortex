@@ -3,8 +3,16 @@
 import getpass
 import requests
 from typing import Optional
+import sys
+from pathlib import Path
 
-BASE_URL = "http://localhost:8000"
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+
+from src.core.config import load_default_config
+
+__test__ = False
+
+BASE_URL = load_default_config().get("base_url", "http://localhost:8000")
 
 
 def login(username: str, password: str) -> str:

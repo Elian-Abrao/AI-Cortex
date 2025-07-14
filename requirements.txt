@@ -1,7 +1,6 @@
 fastapi
 uvicorn
 pyjwt
-tqdm
 python-multipart
 requests
 langchain-openai
